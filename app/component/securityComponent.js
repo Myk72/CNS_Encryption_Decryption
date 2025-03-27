@@ -30,10 +30,6 @@ const SecurityComponent = ({ operation, algorithm }) => {
         setErrorMessage("Message and key length should be equal");
         return;
       }
-      if (algorithm === "AES" && key.length < 8) {
-        setErrorMessage("AES requires a key of at least 8 characters");
-        return;
-      }
       const response = await fetch("/api", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
