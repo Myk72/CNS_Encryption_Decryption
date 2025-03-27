@@ -30,20 +30,30 @@ const SecurityComponent = ({ operation, algorithm }) => {
         setErrorMessage("Message and key length should be equal");
         return;
       }
+      if (algorithm === "AES" && key.length < 8) {
+        setErrorMessage("AES requires a key of at least 8 characters");
+        return;
+      }
       const response = await fetch("/api", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message, key, algorithm, operation }),
       });
-
       const data = await response.json();
+      if (data.status === 400) {
+        setErrorMessage(data.result);
+        return;
+      }
       if (operation === "Encryption") {
         setEncryptedMessage(data.result);
       } else {
         setDecryptedMessage(data.result);
       }
-    } catch {
-      console.error("Error: Here is the error");
+    } catch (error) {
+      if (operation === "Decryption") {
+        setErrorMessage(e.message);
+      }
+      console.error("Error: Here is the error", error);
     }
   };
   const handleCopy = () => {
