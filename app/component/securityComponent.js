@@ -15,11 +15,16 @@ const SecurityComponent = ({ operation, algorithm }) => {
     setDecryptedMessage("");
     setEncryptedMessage("");
   }, [algorithm]);
+
   const handleEncrptionAndDecryption = async (e) => {
     e.preventDefault();
     try {
-      if (message === "" || key === "") {
-        setErrorMessage("Please fill all the fields");
+      if (message === "") {
+        setErrorMessage("Please enter a message");
+        return;
+      }
+      if (algorithm !== "RSA" && key === "") {
+        setErrorMessage("Please enter a key");
         return;
       }
       if (
@@ -30,10 +35,16 @@ const SecurityComponent = ({ operation, algorithm }) => {
         setErrorMessage("Message and key length should be equal");
         return;
       }
+
+      const requestBody = { message, algorithm, operation };
+      if (algorithm !== "RSA" || operation === "Decryption") {
+        requestBody.key = key;
+      }
+
       const response = await fetch("/api", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message, key, algorithm, operation }),
+        body: JSON.stringify(requestBody),
       });
       const data = await response.json();
       if (data.status === 400) {
@@ -46,12 +57,11 @@ const SecurityComponent = ({ operation, algorithm }) => {
         setDecryptedMessage(data.result);
       }
     } catch (error) {
-      if (operation === "Decryption") {
-        setErrorMessage(e.message);
-      }
+      setErrorMessage("An error occurred. Please try again.");
       console.error("Error: Here is the error", error);
     }
   };
+
   const handleCopy = () => {
     navigator.clipboard.writeText(
       operation === "Encryption" ? encryptedMessage : decryptedMessage
@@ -84,35 +94,39 @@ const SecurityComponent = ({ operation, algorithm }) => {
           style={{ resize: "none" }}
         />
       </div>
-
-      <div>
-        <label className="block text-sm font-bold mb-2">{operation} Key</label>
-        <div className="relative">
-          <input
-            type={showKey ? "text" : "password"}
-            className="w-full p-2 border rounded-lg"
-            placeholder={
-              operation === "Encryption"
-                ? "Enter encryption key"
-                : "Enter decryption key"
-            }
-            onChange={(e) => {
-              setKey(e.target.value);
-              setErrorMessage("");
-            }}
-          />
-          <button
-            className="absolute inset-y-0 right-2 flex items-center p-2"
-            onClick={() => setShowKey(!showKey)}
-          >
-            {showKey ? (
-              <img src="/show.png" className="size-5" />
-            ) : (
-              <img src="/hide.png" className="size-5" />
-            )}
-          </button>
+      {console.log(algorithm)}
+      {algorithm !== "RSA" ? (
+        <div>
+          <label className="block text-sm font-bold mb-2">
+            {operation} Key
+          </label>
+          <div className="relative">
+            <input
+              type={showKey ? "text" : "password"}
+              className="w-full p-2 border rounded-lg"
+              placeholder={
+                operation === "Encryption"
+                  ? "Enter encryption key"
+                  : "Enter decryption key"
+              }
+              onChange={(e) => {
+                setKey(e.target.value);
+                setErrorMessage("");
+              }}
+            />
+            <button
+              className="absolute inset-y-0 right-2 flex items-center p-2"
+              onClick={() => setShowKey(!showKey)}
+            >
+              {showKey ? (
+                <img src="/show.png" className="size-5" />
+              ) : (
+                <img src="/hide.png" className="size-5" />
+              )}
+            </button>
+          </div>
         </div>
-      </div>
+      ) : null}
 
       <button
         className="w-full bg-blue-500 text-white p-2 rounded-lg  hover:bg-blue-600"
@@ -134,7 +148,7 @@ const SecurityComponent = ({ operation, algorithm }) => {
               operation === "Encryption" ? encryptedMessage : decryptedMessage
             }
             readOnly
-            style={{ resize: "none" }}
+            // style={{ resize: "none" }}
           />
           <button
             className="w-full bg-green-500 text-white p-2 rounded-lg hover:bg-green-600"

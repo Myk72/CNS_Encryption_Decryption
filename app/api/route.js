@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
+import fs from "fs";
+import path from "path";
 
 export async function POST(req) {
   const { message, key, operation, algorithm } = await req.json();
@@ -24,13 +26,58 @@ export async function POST(req) {
           ? encrypt3DES(message, key)
           : decrypt3DES(message, key);
       break;
+    case "RSA":
+      response =
+        operation === "Encryption"
+          ? rsaEncrypt(message)
+          : rsaDecrypt(message);
+      break;
   }
-  if (response === "AES Decryption Error" || response === "3DES Decryption Error" || response === "Key length and cipher text length should be equal") {
-    return NextResponse.json({ result: response, status:
-      400 });
+  
+  if (
+    response === "AES Decryption Error" ||
+    response === "3DES Decryption Error" ||
+    response === "Key length and cipher text length should be equal" ||
+    response === "RSA Decryption Error"
+  ) {
+    return NextResponse.json({ result: response, status: 400 });
   }
+  
   return NextResponse.json({ result: response, status: 200 });
 }
+
+const rsaEncrypt = (text) => {
+  try {
+    const publicKeyPath = path.resolve('./public_key.pem');
+    const publicKey = fs.readFileSync(publicKeyPath, "utf8");
+    const encrypted = crypto.publicEncrypt({
+      key: publicKey,
+      padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
+      oaepHash: "sha256"
+    }, Buffer.from(text, "utf8"));
+    return encrypted.toString("base64");
+  } catch (error) {
+    console.error("RSA Encryption Error:", error.message);
+    return "RSA Encryption Error: " + error.message;
+  }
+};
+
+const rsaDecrypt = (encryptedText) => {
+  try {
+    const privateKeyPath = path.resolve('./private_key.pem');
+    const privateKey = fs.readFileSync(privateKeyPath, "utf8");
+    const decrypted = crypto.privateDecrypt({
+      key: privateKey,
+      padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
+      oaepHash: "sha256"
+    }, Buffer.from(encryptedText, "base64"));
+    return decrypted.toString("utf8");
+  } catch (error) {
+    console.error("RSA Decryption Error:", error.message);
+    return "RSA Decryption Error: " + error.message;
+  }
+};
+
 
 const otpEncrypt = (text, key) => {
   let cipherText = "";
